@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velocity and Displacement Interaction</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 120px;
+            background: #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            border-bottom: 4px solid #64748b;
+        }
+        #car {
+            position: absolute;
+            bottom: 10px;
+            width: 60px;
+            transition: left 0.1s linear;
+        }
+        .road-markings {
+            position: absolute;
+            bottom: 5px;
+            width: 100%;
+            height: 2px;
+            border-bottom: 2px dashed #fff;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-2xl font-bold text-slate-800 mb-2">Velocity (v) and Displacement-Time (s-t) Graph</h1>
+        <p class="text-slate-600 mb-6">Range: Time 0-100s | Displacement 0-100m. Simulation stops at boundaries.</p>
+
+        <!-- Animation Area -->
+        <div class="mb-8">
+            <div class="flex justify-between mb-2 text-sm font-medium text-slate-500">
+                <span>Origin: 0m</span>
+                <span>Track Simulation</span>
+                <span>End: 100m</span>
+            </div>
+            <div class="canvas-container" id="track">
+                <div class="road-markings"></div>
+                <div id="car">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2m12 0c0 1.1-.9 2-2 2s-2-.9-2-2m4 0c0-1.1-.9-2-2-2s-2 .9-2 2m-4 0H9m0 0c0 1.1-.9-2-2 2s-2-.9-2-2m4 0c0-1.1-.9-2-2-2s-2 .9-2 2" stroke="#1e293b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <rect x="7" y="10" width="4" height="3" rx="1" fill="#3b82f6" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Panel -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 text-center">
+                <div class="text-xs text-blue-600 font-bold uppercase">Velocity (v)</div>
+                <div id="v-display" class="text-2xl font-mono font-bold text-blue-700">0 m/s</div>
+            </div>
+            <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-100 text-center">
+                <div class="text-xs text-emerald-600 font-bold uppercase">Displacement (s)</div>
+                <div id="s-display" class="text-2xl font-mono font-bold text-emerald-700">0.0 m</div>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 text-center">
+                <div class="text-xs text-slate-600 font-bold uppercase">Time (t)</div>
+                <div id="t-display" class="text-2xl font-mono font-bold text-slate-700">0.0 s</div>
+            </div>
+            <div class="bg-amber-50 p-3 rounded-lg border border-amber-100 text-center">
+                <div class="text-xs text-amber-600 font-bold uppercase">Slope</div>
+                <div id="slope-display" class="text-2xl font-mono font-bold text-amber-700">0.0</div>
+            </div>
+        </div>
+
+        <!-- Chart Area -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-6">
+            <canvas id="stGraph" height="150"></canvas>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-wrap gap-3 justify-center items-center">
+            <div class="flex gap-2 bg-slate-100 p-2 rounded-xl">
+                <button onclick="changeVelocity(1)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold transition">Velocity +1</button>
+                <button onclick="changeVelocity(-1)" class="bg-blue-400 hover:bg-blue-500 text-white px-3 py-2 rounded-lg font-bold transition">Velocity -1</button>
+                <button onclick="setVelocity(0)" class="bg-slate-500 hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-bold transition">At rest</button>
+                <button onclick="reverseDirection()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg font-bold transition">Reverse direction</button>
+            </div>
+            
+            <div class="h-10 w-px bg-slate-300 mx-2"></div>
+
+            <button id="startStopBtn" onclick="toggleSim()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition transform active:scale-95 flex items-center gap-2">
+                <span id="btnIcon">▶</span> <span id="btnText">Start</span>
+            </button>
+            
+            <button onclick="resetSim()" class="bg-rose-500 hover:bg-rose-600 text-white px-4 py-3 rounded-lg font-bold shadow-sm transition">Reset</button>
+        </div>
+
+        <!-- Instructions -->
+        <div class="mt-8 p-4 bg-amber-50 rounded-lg border-l-4 border-amber-400 text-sm">
+            <p class="text-amber-900 font-medium">The simulation will automatically pause when time reaches 100s or the car hits the boundaries (0m or 100m).</p>
+        </div>
+    </div>
+
+    <script>
+        let velocity = 0; 
+        let displacement = 0; 
+        let time = 0; 
+        let isRunning = false; 
+        const maxTrackMeters = 100;
+        const maxTimeSeconds = 100;
+        const dt = 0.1; 
+
+        const car = document.getElementById('car');
+        const vDisplay = document.getElementById('v-display');
+        const sDisplay = document.getElementById('s-display');
+        const tDisplay = document.getElementById('t-display');
+        const slopeDisplay = document.getElementById('slope-display');
+        const track = document.getElementById('track');
+        const startStopBtn = document.getElementById('startStopBtn');
+        const btnText = document.getElementById('btnText');
+        const btnIcon = document.getElementById('btnIcon');
+
+        const ctx = document.getElementById('stGraph').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [0],
+                datasets: [{
+                    label: 'Displacement (m)',
+                    data: [{ x: 0, y: 0 }],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { 
+                        type: 'linear',
+                        position: 'bottom',
+                        title: { display: true, text: 'Time (s)', font: { weight: 'bold' } },
+                        min: 0,
+                        max: 100,
+                        ticks: { stepSize: 10 }
+                    },
+                    y: { 
+                        title: { display: true, text: 'Displacement (m)', font: { weight: 'bold' } },
+                        min: 0,
+                        max: 100,
+                        ticks: { stepSize: 10 }
+                    }
+                },
+                plugins: { legend: { display: false } },
+                animation: false 
+            }
+        });
+
+        function toggleSim() {
+            if (!isRunning && (time >= maxTimeSeconds || (displacement >= maxTrackMeters && velocity > 0) || (displacement <= 0 && velocity < 0 && time > 0))) {
+                if ((displacement >= maxTrackMeters && velocity < 0) || (displacement <= 0 && velocity > 0) || (time < maxTimeSeconds)) {
+                    // Allow movement
+                } else {
+                    return; 
+                }
+            }
+
+            isRunning = !isRunning;
+            updateBtnUI();
+        }
+
+        function updateBtnUI() {
+            if (isRunning) {
+                startStopBtn.classList.replace('bg-emerald-600', 'bg-amber-600');
+                startStopBtn.classList.replace('hover:bg-emerald-700', 'hover:bg-amber-700');
+                btnText.innerText = "Pause";
+                btnIcon.innerText = "||";
+            } else {
+                startStopBtn.classList.replace('bg-amber-600', 'bg-emerald-600');
+                startStopBtn.classList.replace('hover:bg-emerald-700', 'hover:bg-emerald-700');
+                btnText.innerText = "Start";
+                btnIcon.innerText = "▶";
+            }
+        }
+
+        function updateUI() {
+            vDisplay.innerText = `${velocity.toFixed(1)} m/s`;
+            sDisplay.innerText = `${displacement.toFixed(1)} m`;
+            tDisplay.innerText = `${time.toFixed(1)} s`;
+            slopeDisplay.innerText = velocity.toFixed(1);
+
+            const trackWidth = track.offsetWidth;
+            const carWidth = 60;
+            const pixelPos = (displacement / maxTrackMeters) * (trackWidth - carWidth);
+            car.style.left = `${pixelPos}px`;
+            car.style.transform = velocity < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+
+            if (isRunning) {
+                chart.data.datasets[0].data.push({ x: time, y: displacement });
+                chart.update('none');
+            }
+        }
+
+        function changeVelocity(delta) {
+            velocity += delta;
+            if (!isRunning) updateUI();
+        }
+
+        function setVelocity(val) {
+            velocity = val;
+            if (!isRunning) updateUI();
+        }
+
+        function reverseDirection() {
+            velocity = -velocity;
+            if (!isRunning) updateUI();
+        }
+
+        function resetSim() {
+            isRunning = false;
+            velocity = 0;
+            displacement = 0;
+            time = 0;
+            updateBtnUI();
+            
+            chart.data.datasets[0].data = [{ x: 0, y: 0 }];
+            chart.update();
+            updateUI();
+        }
+
+        function step() {
+            if (!isRunning) return;
+
+            time += dt;
+            displacement += velocity * dt;
+
+            if (time >= maxTimeSeconds) {
+                time = maxTimeSeconds;
+                isRunning = false;
+                updateBtnUI();
+            }
+
+            if (displacement <= 0) {
+                displacement = 0;
+                if (velocity < 0) {
+                    isRunning = false;
+                    updateBtnUI();
+                }
+            }
+            if (displacement >= maxTrackMeters) {
+                displacement = maxTrackMeters;
+                if (velocity > 0) {
+                    isRunning = false;
+                    updateBtnUI();
+                }
+            }
+
+            updateUI();
+        }
+
+        setInterval(step, 100);
+        window.onload = updateUI;
+    </script>
+</body>
+</html>
